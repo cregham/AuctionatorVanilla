@@ -174,6 +174,19 @@
     <Layers>
       <Layer level="BACKGROUND">
 
+        <Texture name="$parentTop">
+          <Size>
+            <AbsDimension x="600" y="118"/>
+          </Size>
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="10" y="0"/>
+              </Offset>
+            </Anchor>
+          </Anchors>
+        </Texture>
+
         <FontString name="AuctionatorTitle" inherits="GameFontNormal">
           <Anchors>
             <Anchor point="TOP">
@@ -241,6 +254,21 @@
 
 
       <Layer level="ARTWORK">
+
+        <Texture name="$parentMiddle">
+          <Size>
+            <AbsDimension x="605" y="64"/>
+          </Size>
+          <Anchors>
+            <Anchor point="TOPLEFT">
+              <Offset>
+                <AbsDimension x="6" y="-167"/>
+              </Offset>
+            </Anchor>
+          </Anchors>
+          <TexCoords left="0.1953125" right="0.8046875" top="0" bottom="1"/>
+        </Texture>
+
 
         <FontString inherits="GameFontHighlightSmall" text="Item Price">
           <Anchors>
@@ -692,6 +720,14 @@
 
     <Layers>
       <Layer level="ARTWORK">
+        <Texture name="AuctionatorConfigFrameHeader">
+          <Size x="256" y="64"/>
+          <Anchors>
+            <Anchor point="TOP">
+              <Offset x="0" y="12"/>
+            </Anchor>
+          </Anchors>
+        </Texture>
         <FontString inherits="GameFontNormal" text="Auctionator">
           <Anchors>
             <Anchor point="TOP" relativeTo="AuctionatorConfigFrameHeader">
