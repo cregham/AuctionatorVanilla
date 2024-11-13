@@ -147,10 +147,6 @@
       </Frame>
 
     </Frames>
-
-    <HighlightTexture file="Interface\HelpFrame\HelpFrameButton-Highlight" alphaMode="ADD">
-      <TexCoords left="0" right="1.0" top="0.0" bottom="0.6"/>
-    </HighlightTexture>
     <Scripts>
       <OnClick>
         Auctionator_EntryOnClick();
@@ -192,19 +188,17 @@
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
-                <AbsDimension x="300" y="-70"/>
+                <AbsDimension x="150" y="-70"/>
               </Offset>
             </Anchor>
           </Anchors>
         </FontString>
 
-
-
         <FontString name="Auctionator_Recommend_Text" inherits="GameFontNormal" text="Recommended buyout price">
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
-                <AbsDimension x="10" y="-38"/>
+                <AbsDimension x="40" y="-38"/>
               </Offset>
             </Anchor>
           </Anchors>
@@ -312,83 +306,6 @@
     <Frames>
 
 
-      <Button>
-        <Size>
-          <AbsDimension y="180" />
-        </Size>
-        <Anchors>
-          <Anchor point="TOPLEFT">
-            <Offset>
-              <AbsDimension x="5" y="-4"/>
-            </Offset>
-          </Anchor>
-          <Anchor point="RIGHT">
-            <Offset>
-              <AbsDimension x="63"/>
-            </Offset>
-          </Anchor>
-        </Anchors>
-        <Layers>
-          <Layer level="BACKGROUND">
-
-          </Layer>
-        </Layers>
-
-
-        <Scripts>
-          <OnLoad>
-            this:RegisterEvent("NEW_AUCTION_UPDATE");
-            this:RegisterForDrag("LeftButton");
-          </OnLoad>
-          <OnEvent>
-            if ( event == "NEW_AUCTION_UPDATE") then
-              Auctionator_Hilite1:Hide();
-            end
-          </OnEvent>
-          <OnClick>
-            ClickAuctionSellItemButton();
-            ClearCursor();
-            AuctionsFrameAuctions_ValidateAuction();
-          </OnClick>
-          <OnReceiveDrag>
-            ClickAuctionSellItemButton();
-            ClearCursor();
-            AuctionsFrameAuctions_ValidateAuction();
-          </OnReceiveDrag>
-          <OnEnter>
-            Auctionator_Hilite1:Show();
-          </OnEnter>
-          <OnLeave>
-            Auctionator_Hilite1:Hide();
-          </OnLeave>
-        </Scripts>
-
-        <Frames>
-          <Frame name="Auctionator_Hilite1" hidden="true">
-            <Anchors>
-              <Anchor point="TOPLEFT">
-                <Offset>
-                  <AbsDimension x="0" y="0"/>
-                </Offset>
-              </Anchor>
-              <Anchor point="BOTTOMRIGHT">
-                <Offset>
-                  <AbsDimension x="0" y="0"/>
-                </Offset>
-              </Anchor>
-            </Anchors>
-
-            <Backdrop edgeFile="Interface\Tooltips\UI-Tooltip-Border">
-              <EdgeSize>
-                <AbsValue val="16"/>
-              </EdgeSize>
-            </Backdrop>
-          </Frame>
-
-        </Frames>
-
-      </Button>
-
 
       <Button name="Auctionator_RecommendItem_Tex">
         <Size>
@@ -419,7 +336,7 @@
 
       <Frame>
         <Size>
-          <AbsDimension x="120" y="20" />
+          <AbsDimension x="220" y="20" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="Auctionator_Recommend_Text">
@@ -449,7 +366,7 @@
 
       <Frame>
         <Size>
-          <AbsDimension x="120" y="20" />
+          <AbsDimension x="220" y="20" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="Auctionator_Recommend_Text">
