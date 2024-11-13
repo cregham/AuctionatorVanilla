@@ -187,21 +187,12 @@
           </Anchors>
         </Texture>
 
-        <FontString name="AuctionatorTitle" inherits="GameFontNormal">
-          <Anchors>
-            <Anchor point="TOP">
-              <Offset>
-                <AbsDimension x="0" y="-18"/>
-              </Offset>
-            </Anchor>
-          </Anchors>
-        </FontString>
 
         <FontString name="AuctionatorMessage" inherits="GameFontNormal">
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
-                <AbsDimension x="8" y="-70"/>
+                <AbsDimension x="300" y="-70"/>
               </Offset>
             </Anchor>
           </Anchors>
@@ -213,7 +204,7 @@
           <Anchors>
             <Anchor point="TOPLEFT">
               <Offset>
-                <AbsDimension x="77" y="-38"/>
+                <AbsDimension x="10" y="-38"/>
               </Offset>
             </Anchor>
           </Anchors>
@@ -223,7 +214,7 @@
           <Anchors>
             <Anchor point="LEFT" relativePoint="RIGHT" relativeTo="Auctionator_Recommend_Text">
               <Offset>
-                <AbsDimension x="20" y="-2"/>
+                <AbsDimension x="10" y="-2"/>
               </Offset>
             </Anchor>
           </Anchors>
@@ -233,7 +224,7 @@
           <Anchors>
             <Anchor point="TOPLEFT" relativeTo="Auctionator_Recommend_Text">
               <Offset>
-                <AbsDimension x="152" y="-28"/>
+                <AbsDimension x="0" y="-28"/>
               </Offset>
             </Anchor>
           </Anchors>
@@ -243,7 +234,7 @@
           <Anchors>
             <Anchor point="TOPLEFT" relativeTo="Auctionator_Recommend_Text">
               <Offset>
-                <AbsDimension x="152" y="-51"/>
+                <AbsDimension x="0" y="-51"/>
               </Offset>
             </Anchor>
           </Anchors>
