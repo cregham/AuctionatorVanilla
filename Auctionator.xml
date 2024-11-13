@@ -1,4 +1,4 @@
-<Ui xsi:schemaLocation="http://www.blizzard.com/wow/ui/">
+﻿<Ui>
 
   <Script file="Auctionator.lua"/>
 
@@ -170,18 +170,6 @@
     <Layers>
       <Layer level="BACKGROUND">
 
-        <Texture name="$parentTop">
-          <Size>
-            <AbsDimension x="600" y="118"/>
-          </Size>
-          <Anchors>
-            <Anchor point="TOPLEFT">
-              <Offset>
-                <AbsDimension x="10" y="0"/>
-              </Offset>
-            </Anchor>
-          </Anchors>
-        </Texture>
 
 
         <FontString name="AuctionatorMessage" inherits="GameFontNormal">
@@ -336,7 +324,7 @@
 
       <Frame>
         <Size>
-          <AbsDimension x="220" y="20" />
+          <AbsDimension x="160" y="20" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="Auctionator_Recommend_Text">
@@ -366,7 +354,7 @@
 
       <Frame>
         <Size>
-          <AbsDimension x="220" y="20" />
+          <AbsDimension x="160" y="20" />
         </Size>
         <Anchors>
           <Anchor point="TOPLEFT" relativeTo="Auctionator_Recommend_Text">
