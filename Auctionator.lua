@@ -55,8 +55,6 @@ function Auctionator_EventHandler()
 
 --	chatmsg (event);
 
-    SplitItems_OnEvent()
-
     if (event == "VARIABLES_LOADED")			then	Auctionator_OnLoad(); 					end; 
     if (event == "ADDON_LOADED")				then	Auctionator_OnAddonLoaded(); 			end; 
     if (event == "AUCTION_ITEM_LIST_UPDATE")	then	Auctionator_OnAuctionUpdate(); 			end; 
@@ -536,68 +534,29 @@ end
 
 function Auctionator_OnAuctionHouseClosed()
 
-    AuctionatorOptionsFrame:Hide();
     AuctionatorDescriptionFrame:Hide();
     Auctionator_Sell_Template:Hide();
     
 end
 
 -----------------------------------------
-
-local OngoingProcess = false
-local OngoingitemName = nil
-local OngoingDoneCount = 0
-local OngoingTotalCount = 0
-local itemSplitTick = -1
-local CurrentItemStackSize = 0;
+local splitQueue = {}             -- Queue for splitting items
+local auctionQueue = {}           -- Queue for creating auctions for split items
+local splitQueueCount = 0         -- Manually track the split queue size
+local auctionQueueCount = 0       -- Manually track the auction creation queue size
+local splitProcessing = false     -- Flag to track if splitting is in progress
+local auctionProcessing = false   -- Flag to track if auction creation is in progress
+local splitPostPrice = 0
+local itemInAH = false
 function Auctionator_OnUpdate(self, elapsed)
-    Auctionator_SplitStack(self, elapsed);
-    Auctionator_Idle (self, elapsed);
+    Auctionator_Post(self, elapsed)
+
+    if not splitProcessing || not auctionProcessing and not itemInAH then
+        Auctionator_Idle(self, elapsed)
+    end
 end
-
-function Auctionator_SplitStack(self, elapsed) 
-    if OngoingProcess == false then
-		return
-	end
-	
-	if itemSplitTick < 1 and itemSplitTick > -1 then
-		itemSplitTick = itemSplitTick + arg1
-		return
-	end
-
-	if CursorHasItem() then
-		AbortItemSplit()
-		return
-	end
-	
-	-- Terminate split if no more stacks
-    chatmsg("Bag Item Count "..CurrentItemStackSize)
-    chatmsg("Ongoing Done Count "..OngoingDoneCount)
-	if CurrentItemStackSize <= OngoingDoneCount then
-        chatmsg("Aborting")
-		AbortItemSplit()
-		return
-	end
-    chatmsg("BagID "..bagID)
-    chatmsg("SlotID "..slotID)
-	SplitContainerItem(bagID, slotID, 1)
-
-	if CursorHasItem() then
-		if PlaceInEmptySlot(false) then
-                        --PickupContainerItem(singleBagID, singleSlotID)
-            --ClickAuctionSellItemButton()
-            --StartAuction(basedata.itemPrice * 0.95, baseda.itemPrice, 1440)
-			OngoingDoneCount = OngoingDoneCount + 1
-		else
-			AbortItemSplit()
-		end
-	end
-	itemSplitTick = -1
-end
------------------------------------------
 
 function Auctionator_Idle(self, elapsed) 
- 
     if (self.TimeSinceLastUpdate == nil) then 
         self.TimeSinceLastUpdate = 0; 
     end; 
@@ -682,9 +641,187 @@ function Auctionator_Idle(self, elapsed)
         end
 
     end
-
 end
 
+function Auctionator_Post(self, elapsed)
+
+    if (self.TimeSinceLastPost == nil) then 
+        self.TimeSinceLastPost = 0; 
+    end; 
+    self.TimeSinceLastPost = self.TimeSinceLastPost + 0.1;--elapsed; 
+     
+    if (AuctionatorMessage == nil) then 
+        return; 
+    end; 
+     
+    if (self.NumIdlePosts == nil) then 
+        self.NumIdlePosts = 0; 
+    end; 
+    self.NumIdlePosts = self.NumIdlePosts + 1;
+    
+    if (self.TimeSinceLastPost > 3) then
+    
+        self.TimeSinceLastPost = 0;
+
+        if itemInAH and not splitProcessing and not auctionProcessing then
+            chatmsg("Creating")
+            local auctionItemName, auctionTexture, auctionCount = GetAuctionSellItemInfo()
+            if auctionItemName then
+         
+                local minBid = round(splitPostPrice * 0.95)
+                local buyoutPrice = round(splitPostPrice)
+                local runTime = 2 
+
+                print("Attempting to start auction...")
+                print("Item: " .. auctionItemName .. ", Stack Size: " .. tostring(auctionCount))
+                print("minBid: " .. tostring(minBid) .. ", buyoutPrice: " .. tostring(buyoutPrice) .. ", runTime: " .. tostring(runTime))
+
+                if CanSendAuctionQuery() then
+                    if StartAuction(1, 1, 2) then
+                        print("Auction created for item: " .. auctionItemName)
+                    else
+                        print("Failed to start auction for item: " .. auctionItemName)
+                    end
+                else
+                    print("Cannot send auction query at this time")
+                    return
+                end
+            end
+            itemInAH = false
+        elseif not splitProcessing and auctionQueueCount > 0 and not auctionProcessing then
+            auctionProcessing = true
+            chatmsg("Moving")
+        
+            local operation = table.remove(auctionQueue, 1)
+            auctionQueueCount = auctionQueueCount - 1
+            PickupContainerItem(operation[1], operation[2]);
+            ClickAuctionSellItemButton();
+            ClearCursor();
+
+            itemInAH = true
+            auctionProcessing = false
+        elseif not auctionProcessing and splitQueueCount > 0 and not splitProcessing then
+            splitProcessing = true
+           chatmsg("Splitting")
+            Auctionator_ProcessSplitQueue()
+        
+            splitProcessing = false
+        end
+    end
+end
+
+function Auctionator_QueueSplit(itemBag, itemSlot, freeSlots, stackSize)
+    for i = 1, stackSize do
+        splitQueueCount = splitQueueCount + 1
+        chatmsg("inserting to split queue")
+        table.insert(splitQueue, {itemBag = itemBag, itemSlot = itemSlot, freeBag = freeSlots[i][1], freeSlot = freeSlots[i][2]})
+    end
+end
+
+-- Function to process the split queue
+function Auctionator_ProcessSplitQueue()
+    if splitQueueCount == 0 then
+        splitProcessing = false
+        return
+    end
+
+    local operation = table.remove(splitQueue, 1)
+    splitQueueCount = splitQueueCount - 1
+    
+    SplitContainerItem(operation.itemBag, operation.itemSlot, 1)
+    PickupContainerItem(operation.freeBag, operation.freeSlot)
+    
+    table.insert(auctionQueue, {operation.freeBag, operation.freeSlot})
+    auctionQueueCount = auctionQueueCount + 1
+    
+    currentItemBeingPosted = operation
+end
+
+function Auctionator_SplitStack(itemBag, itemSlot, stackSize)
+    local freeSlots, freeSlotCount = Auctionator_GetFreeBagSlots()
+
+    if freeSlotCount < stackSize then
+        DEFAULT_CHAT_FRAME:AddMessage("Not enough free bag slots to split the stack!", 1, 0, 0)
+        return false
+    end
+
+    Auctionator_QueueSplit(itemBag, itemSlot, freeSlots, stackSize)
+    return true
+end
+
+
+function Auctionator_GetFreeBagSlots()
+    local freeSlots = {} -- Initialize table
+    local count = 0      -- Manual counter
+
+    for bag = 0, 4 do
+        for slot = 1, GetContainerNumSlots(bag) do
+            if not GetContainerItemInfo(bag, slot) then
+                count = count + 1
+                freeSlots[count] = {bag, slot} -- Store bag and slot as a pair
+            end
+        end
+    end
+
+    return freeSlots, count -- Return both the table and the count
+end
+
+function Auctionator_PostStackIndividually()
+    local itemName, stackSize, bag, slot = Auctionator_GetSelectedItem()
+    if not itemName then
+        DEFAULT_CHAT_FRAME:AddMessage("No item selected!", 1, 0, 0)
+        return
+    end
+
+    splitPostPrice = basedata.itemPrice
+
+    Auctionator_SplitStack(bag, slot, stackSize)
+
+    ClickAuctionSellItemButton()
+    ClearCursor()
+end
+
+function Auctionator_GetSelectedItem()
+    local bag, slot = Auctionator_GetBagSlot() 
+    if not bag or not slot then return nil end
+
+    local itemName, stackSize, _ = GetContainerItemInfo(bag, slot)
+    return itemName, stackSize, bag, slot
+end
+
+function Auctionator_GetBagSlot()
+    return bagID, slotID
+end
+
+function Auctionator_GetBidPrice()
+    return basedata.itemPrice * 0.95
+end
+
+function Auctionator_GetBuyoutPrice()
+    return basedata.itemPrice
+end
+
+function Auctionator_CreateSingleAuctions()
+    if CanSendAuctionQuery() then
+        if StartAuction(100, 102, 2) then
+            print("Auction created for item: ")
+        else
+            print("Failed to start auction for item: ")
+        end
+    else
+        print("Cannot send auction query at this time")
+        return
+    end
+    --Auctionator_PostStackIndividually()
+end
+
+local function AuctionErrorEvent(self, event, msg)
+    print("Auction Error:", msg)
+end
+
+local auctionErrorFrame = CreateFrame("Frame")
+auctionErrorFrame:RegisterEvent("UI_ERROR_MESSAGE")
+auctionErrorFrame:SetScript("OnEvent", AuctionErrorEvent)
     
 -----------------------------------------
 
@@ -752,9 +889,7 @@ end
 
 function Auctionator_EntryOnClick()
     local entryIndex = this:GetID();
-    
---	chatmsg (entryIndex);
-    
+   
     basedata = sorteddata[entryIndex];
 
     Auctionator_UpdateRecommendation();
@@ -771,73 +906,13 @@ function AuctionatorMoneyFrame_OnLoad()
     MoneyFrame_SetType("AUCTION");
 end
 
-function Auctionator_CreateSingleAuctions()
-    local auctionItemName, auctionTexture, auctionCount = GetAuctionSellItemInfo(); 
-    InitiateSplit(auctionItemName, 1);
+function Auctionator_CheckAHOpen()
+    if not AuctionFrame or not AuctionFrame:IsVisible() then
+        DEFAULT_CHAT_FRAME:AddMessage("The Auction House is not open!", 1, 0, 0)
+        return false
+    end
+    return true
 end
-
-function InitiateSplit(name, stacksize)
-    local _, bagitemCount, _, _, _ = GetContainerItemInfo(bagID, slotID)
-
-    ClickAuctionSellItemButton()
-    PlaceInEmptySlot(true)
-
-	if bagitemCount > 0 then
-		OngoingProcess = true
-		OngoingitemName = name
-		OngoingDoneCount = 0
-        CurrentItemStackSize = bagitemCount
-		SplitItems_OnEvent()
-	end
-end
-
-function SplitItems_OnEvent()
-	if OngoingProcess == true then
-		itemSplitTick = 0
-	end
-end
------------------------------------------------------------
-
-local singleBagID = nil;
-local singleSlotID = nil;
-
-function PlaceInEmptySlot(rootStack)
-	for bag = 0, 4 do
-		for slot = 1, GetContainerNumSlots(bag) do
-			local _, itemCount, locked = GetContainerItemInfo(bag, slot)
-			if not itemCount or itemCount == 0 then      
-                chatmsg("Setting")          
-                if rootStack then
-                    chatmsg("Root stack bag" ..bag)     
-                    chatmsg("Root stack slot" ..slot)     
-                    bagID = bag
-                    slotID = slot
-                else
-                    chatmsg("child bag" ..bag)     
-                    chatmsg("child bag" ..slot)    
-                    singleBagID = bag
-                    singleSlotID = slot
-                end
-				PickupContainerItem(bag, slot)
-				return true
-			end
-		end
-	end
-	return false
-end
-
---------------------------------------------------
-
-function AbortItemSplit()
-	ClearCursor()
-	OngoingProcess = false
-	OngoingitemName = nil
-	OngoingDoneCount = 0
-	OngoingTotalCount = 0
-    CurrentItemStackSize = 0
-	itemSplitTick = -1
-end
------------------------------------------------------------
 
 
 --[[***************************************************************
