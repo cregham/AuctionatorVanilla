@@ -1,4 +1,4 @@
-﻿<Ui>
+﻿<Ui xsi:schemaLocation="http://www.blizzard.com/wow/ui/">
 
   <Script file="Auctionator.lua"/>
 
@@ -16,7 +16,6 @@
         this:RegisterEvent("AUCTION_HOUSE_SHOW");
         this:RegisterEvent("AUCTION_HOUSE_CLOSED");
         this:RegisterEvent("NEW_AUCTION_UPDATE");
-      
         self = {};
         self.TimeSinceLastUpdate = 0;
         self.NumIdles = 0;
@@ -381,6 +380,24 @@
         </Frames>
       </Frame>
 
+		<Button name="Auctionator1Button" inherits="UIPanelButtonTemplate" text="Create Single Auctions">
+			<Size>
+				<AbsDimension x="175" y="22"/>
+			</Size>
+			<Anchors>
+				<Anchor point="RIGHT">
+					<Offset>
+						<AbsDimension x="-14" y="-163"/>
+					</Offset>
+				</Anchor>
+			</Anchors>
+			<Scripts>
+				<OnClick>
+					Auctionator_CreateSingleAuctions();
+				</OnClick>
+			</Scripts>
+		</Button>
+
 
       <ScrollFrame name="AuctionatorScrollFrame" inherits="FauxScrollFrameTemplate">
         <Size>
@@ -403,8 +420,6 @@
           </OnShow>
         </Scripts>
       </ScrollFrame>
-
-
 
       <Button name="AuctionatorEntry1" inherits="AuctionatorEntryTemplate">
         <Anchors>
@@ -485,13 +500,6 @@
           <Anchor point="TOPLEFT" relativeTo="AuctionatorEntry14" relativePoint="BOTTOMLEFT"/>
         </Anchors>
       </Button>
-
-
-
-
-  
-
-      
     </Frames>
 
   </Frame>

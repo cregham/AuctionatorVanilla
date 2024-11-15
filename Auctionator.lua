@@ -55,14 +55,14 @@ function Auctionator_EventHandler()
 
 --	chatmsg (event);
 
+    SplitItems_OnEvent()
+
     if (event == "VARIABLES_LOADED")			then	Auctionator_OnLoad(); 					end; 
     if (event == "ADDON_LOADED")				then	Auctionator_OnAddonLoaded(); 			end; 
     if (event == "AUCTION_ITEM_LIST_UPDATE")	then	Auctionator_OnAuctionUpdate(); 			end; 
     if (event == "AUCTION_OWNED_LIST_UPDATE")	then	Auctionator_OnAuctionOwnedUpdate(); 	end; 
-    if (event == "AUCTION_HOUSE_SHOW")			then	Auctionator_OnAuctionHouseShow(); 		end; 
     if (event == "AUCTION_HOUSE_CLOSED")		then	Auctionator_OnAuctionHouseClosed(); 	end; 
     if (event == "NEW_AUCTION_UPDATE")			then	Auctionator_OnNewAuctionUpdate(); 		end; 
-
 end
 
 -----------------------------------------
@@ -160,32 +160,30 @@ end
 
 -----------------------------------------
 
+local bagID = nil;
+local slotID = nil;
 
-function Auctionator_ContainerFrameItemButton_OnModifiedClick (button)
-    
-    if (not	AuctionFrame:IsShown())
+function Auctionator_ContainerFrameItemButton_OnClick (button)
+    if (button == "RightButton"
+        and	AuctionFrame:IsShown()
+    )
     then
-        return auctionator_orig_ContainerFrameItemButton_OnModifiedClick (button);
-    end;
-
-    if (PanelTemplates_GetSelectedTab (AuctionFrame) ~= AUCTIONATOR_TAB_INDEX) then
+     if (PanelTemplates_GetSelectedTab (AuctionFrame) ~= AUCTIONATOR_TAB_INDEX) then
     
         AuctionFrameTab_OnClick (AUCTIONATOR_TAB_INDEX);
     
-    end
-    
-    
-    PickupContainerItem(this:GetParent():GetID(), this:GetID());
-
-    local infoType = GetCursorInfo()
-
-    if (infoType == "item") then
+    end 
+        bagID = this:GetParent():GetID();  
+        slotID = this:GetID();             
+           
+        PickupContainerItem(bagID, slotID);
         ClickAuctionSellItemButton();
         ClearCursor();
-    end
 
+   else 
+         return auctionator_orig_ContainerFrameItemButton_OnClick (button);
+    end;
 end
-
 
 -----------------------------------------
 
@@ -250,8 +248,8 @@ function Auctionator_SetupHookFunctions ()
     auctionator_orig_AuctionFrameTab_OnClick = AuctionFrameTab_OnClick;
     AuctionFrameTab_OnClick = Auctionator_AuctionFrameTab_OnClick;
     
-    auctionator_orig_ContainerFrameItemButton_OnModifiedClick = ContainerFrameItemButton_OnModifiedClick;
-    ContainerFrameItemButton_OnModifiedClick = Auctionator_ContainerFrameItemButton_OnModifiedClick;
+    auctionator_orig_ContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick;
+    ContainerFrameItemButton_OnClick = Auctionator_ContainerFrameItemButton_OnClick;
     
     auctionator_orig_AuctionFrameAuctions_Update = AuctionFrameAuctions_Update;
     AuctionFrameAuctions_Update = Auctionator_AuctionFrameAuctions_Update;
@@ -544,17 +542,58 @@ function Auctionator_OnAuctionHouseClosed()
     
 end
 
-
-
 -----------------------------------------
 
+local OngoingProcess = false
+local OngoingitemName = nil
+local OngoingDoneCount = 0
+local OngoingTotalCount = 0
+local itemSplitTick = -1
+local CurrentItemStackSize = 0;
 function Auctionator_OnUpdate(self, elapsed)
-
+    Auctionator_SplitStack(self, elapsed);
     Auctionator_Idle (self, elapsed);
-
 end
 
+function Auctionator_SplitStack(self, elapsed) 
+    if OngoingProcess == false then
+		return
+	end
+	
+	if itemSplitTick < 1 and itemSplitTick > -1 then
+		itemSplitTick = itemSplitTick + arg1
+		return
+	end
 
+	if CursorHasItem() then
+		AbortItemSplit()
+		return
+	end
+	
+	-- Terminate split if no more stacks
+    chatmsg("Bag Item Count "..CurrentItemStackSize)
+    chatmsg("Ongoing Done Count "..OngoingDoneCount)
+	if CurrentItemStackSize <= OngoingDoneCount then
+        chatmsg("Aborting")
+		AbortItemSplit()
+		return
+	end
+    chatmsg("BagID "..bagID)
+    chatmsg("SlotID "..slotID)
+	SplitContainerItem(bagID, slotID, 1)
+
+	if CursorHasItem() then
+		if PlaceInEmptySlot(false) then
+                        --PickupContainerItem(singleBagID, singleSlotID)
+            --ClickAuctionSellItemButton()
+            --StartAuction(basedata.itemPrice * 0.95, baseda.itemPrice, 1440)
+			OngoingDoneCount = OngoingDoneCount + 1
+		else
+			AbortItemSplit()
+		end
+	end
+	itemSplitTick = -1
+end
 -----------------------------------------
 
 function Auctionator_Idle(self, elapsed) 
@@ -731,6 +770,75 @@ function AuctionatorMoneyFrame_OnLoad()
     SmallMoneyFrame_OnLoad();
     MoneyFrame_SetType("AUCTION");
 end
+
+function Auctionator_CreateSingleAuctions()
+    local auctionItemName, auctionTexture, auctionCount = GetAuctionSellItemInfo(); 
+    InitiateSplit(auctionItemName, 1);
+end
+
+function InitiateSplit(name, stacksize)
+    local _, bagitemCount, _, _, _ = GetContainerItemInfo(bagID, slotID)
+
+    ClickAuctionSellItemButton()
+    PlaceInEmptySlot(true)
+
+	if bagitemCount > 0 then
+		OngoingProcess = true
+		OngoingitemName = name
+		OngoingDoneCount = 0
+        CurrentItemStackSize = bagitemCount
+		SplitItems_OnEvent()
+	end
+end
+
+function SplitItems_OnEvent()
+	if OngoingProcess == true then
+		itemSplitTick = 0
+	end
+end
+-----------------------------------------------------------
+
+local singleBagID = nil;
+local singleSlotID = nil;
+
+function PlaceInEmptySlot(rootStack)
+	for bag = 0, 4 do
+		for slot = 1, GetContainerNumSlots(bag) do
+			local _, itemCount, locked = GetContainerItemInfo(bag, slot)
+			if not itemCount or itemCount == 0 then      
+                chatmsg("Setting")          
+                if rootStack then
+                    chatmsg("Root stack bag" ..bag)     
+                    chatmsg("Root stack slot" ..slot)     
+                    bagID = bag
+                    slotID = slot
+                else
+                    chatmsg("child bag" ..bag)     
+                    chatmsg("child bag" ..slot)    
+                    singleBagID = bag
+                    singleSlotID = slot
+                end
+				PickupContainerItem(bag, slot)
+				return true
+			end
+		end
+	end
+	return false
+end
+
+--------------------------------------------------
+
+function AbortItemSplit()
+	ClearCursor()
+	OngoingProcess = false
+	OngoingitemName = nil
+	OngoingDoneCount = 0
+	OngoingTotalCount = 0
+    CurrentItemStackSize = 0
+	itemSplitTick = -1
+end
+-----------------------------------------------------------
+
 
 --[[***************************************************************
 
